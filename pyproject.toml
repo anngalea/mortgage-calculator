@@ -1,0 +1,21 @@
+[project]
+name = "mortgage-calculator"
+version = "0.1.0"
+description = "Date-aware mortgage overpayment planner built with Streamlit."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "openpyxl>=3.1",
+    "pandas>=2.2",
+    "plotly>=5.22",
+    "streamlit>=1.35",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

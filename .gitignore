@@ -1,0 +1,15 @@
+__pycache__/
+.pytest_cache/
+.streamlit/
+.venv/
+.tools/
+.uv-cache/
+.uv-python/
+git-data/
+venv/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+*.xlsx
+*.csv
