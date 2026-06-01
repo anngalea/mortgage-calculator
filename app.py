@@ -12,11 +12,6 @@ from models import MortgageInput, Overpayment, ProjectionSettings, RatePeriod
 from mortgage_engine import project_with_baseline
 from public_warning import PUBLIC_WARNING_TEXT
 from sample_data import DEFAULT_MORTGAGE, DEFAULT_RATE_SCHEDULE, DEFAULT_SETTINGS
-from scenario_planner import (
-    DEFAULT_COMPARISON_AMOUNT,
-    calculate_half_time_repayment,
-    generate_overpayment_scenarios,
-)
 
 
 st.set_page_config(page_title="Mortgage Overpayment Planner", layout="wide")
@@ -154,12 +149,11 @@ mortgage = MortgageInput(
     inflation_rate=inflation_rate / 100,
 )
 
-setup_tab, rates_tab, overpayments_tab, auto_tab, dashboard_tab, ledger_tab, charts_tab, exports_tab = st.tabs(
+setup_tab, rates_tab, overpayments_tab, dashboard_tab, ledger_tab, charts_tab, exports_tab = st.tabs(
     [
         "Scenario",
         "Interest Rates",
         "Overpayments",
-        "Auto Scenarios",
         "Dashboard",
         "Ledger",
         "Charts",
@@ -286,79 +280,6 @@ baseline_result, scenario_result = project_with_baseline(
 
 for warning in scenario_result.warnings:
     st.warning(warning)
-
-with auto_tab:
-    st.subheader("Automatic overpayment scenarios")
-    amount_to_compare = st.number_input(
-        "Amount to compare",
-        min_value=0.0,
-        value=DEFAULT_COMPARISON_AMOUNT,
-        step=500.0,
-        format="%.2f",
-        key=f"auto_amount_{INPUT_VERSION}",
-    )
-    auto_comparison = generate_overpayment_scenarios(
-        mortgage,
-        rate_schedule,
-        settings,
-        amount=amount_to_compare,
-    )
-    best_auto = auto_comparison.best
-
-    if best_auto:
-        metric_cols = st.columns(4)
-        metric_cols[0].metric("Best option", best_auto.name)
-        metric_cols[1].metric("Interest saved", money(best_auto.interest_saved))
-        metric_cols[2].metric("Months saved", best_auto.months_saved)
-        metric_cols[3].metric("Payoff date", metric_value(best_auto.payoff_date))
-
-    scenario_rows = pd.DataFrame(
-        [
-            {
-                "Scenario": item.name,
-                "What this does": item.description,
-                "Payoff Date": item.payoff_date,
-                "Months Saved": item.months_saved,
-                "Interest Saved": item.interest_saved,
-                "Total Interest": item.total_interest,
-                "Total Extra Paid": item.total_extra_paid,
-            }
-            for item in auto_comparison.scenarios
-        ]
-    )
-    st.dataframe(rounded_frame(scenario_rows), width="stretch")
-
-    if not scenario_rows.empty:
-        chart_rows = scenario_rows.melt(
-            id_vars="Scenario",
-            value_vars=["Interest Saved", "Months Saved"],
-            var_name="Measure",
-            value_name="Value",
-        )
-        st.plotly_chart(
-            px.bar(
-                chart_rows,
-                x="Scenario",
-                y="Value",
-                color="Measure",
-                barmode="group",
-                title="Savings by automatic scenario",
-            ),
-            width="stretch",
-        )
-
-    st.subheader("Repay in half the time")
-    half_time_plan = calculate_half_time_repayment(mortgage, rate_schedule, settings)
-    half_cols = st.columns(4)
-    half_cols[0].metric("Target months", half_time_plan.target_months)
-    half_cols[1].metric("Monthly payment needed", money(half_time_plan.monthly_payment_required))
-    half_cols[2].metric("Extra per month needed", money(half_time_plan.monthly_overpayment_required))
-    half_cols[3].metric("Payoff date", metric_value(half_time_plan.payoff_date))
-
-    half_cols = st.columns(3)
-    half_cols[0].metric("Interest saved", money(half_time_plan.interest_saved))
-    half_cols[1].metric("Months saved", half_time_plan.months_saved)
-    half_cols[2].metric("Total extra paid", money(half_time_plan.total_extra_paid))
 
 with dashboard_tab:
     dashboard = scenario_result.dashboard
