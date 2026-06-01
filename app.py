@@ -6,7 +6,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from display_helpers import metric_value
+from display_helpers import metric_value, recurring_overpayment_date_bounds
 from exports import excel_export, ledger_csv, monthly_summary_csv, rounded_frame
 from models import MortgageInput, Overpayment, ProjectionSettings, RatePeriod
 from mortgage_engine import project_with_baseline
@@ -212,6 +212,9 @@ with rates_tab:
         st.warning("No rate exists on or before the next payment date.")
 
 with overpayments_tab:
+    recurring_min_date, recurring_max_date = recurring_overpayment_date_bounds(mortgage)
+    default_recurring_start = DEFAULT_SETTINGS.monthly_overpayment_start or next_payment_date
+    default_recurring_start = min(max(default_recurring_start, recurring_min_date), recurring_max_date)
     col1, col2, col3 = st.columns(3)
     with col1:
         monthly_overpayment = st.number_input(
@@ -219,13 +222,21 @@ with overpayments_tab:
         )
     with col2:
         recurring_start = st.date_input(
-            "Recurring start date", value=DEFAULT_SETTINGS.monthly_overpayment_start or next_payment_date
+            "Recurring start date",
+            value=default_recurring_start,
+            min_value=recurring_min_date,
+            max_value=recurring_max_date,
         )
     with col3:
         use_recurring_end = st.toggle("Use recurring end date", value=False)
         recurring_end = None
         if use_recurring_end:
-            recurring_end = st.date_input("Recurring end date", value=recurring_start)
+            recurring_end = st.date_input(
+                "Recurring end date",
+                value=recurring_start,
+                min_value=recurring_start,
+                max_value=recurring_max_date,
+            )
 
     overpayment_frame = st.data_editor(
         pd.DataFrame(columns=["Date", "Amount", "Description"]),
