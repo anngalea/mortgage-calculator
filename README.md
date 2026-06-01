@@ -2,6 +2,10 @@
 
 A local Streamlit app for projecting an existing EUR repayment mortgage with date-aware overpayments.
 
+## Public Warning
+
+This app is a coding exercise, planner, and sandbox from an exercise in vibe coding. It is not financial advice. Do not use it to make mortgage, investment, tax, or other financial decisions; look elsewhere for qualified financial advice.
+
 The app replaces a spreadsheet-style month table with an event ledger. Scheduled payments happen on the 1st of each month, and extra payments can happen on the same day or on any other date.
 
 ## Install

@@ -10,6 +10,7 @@ from display_helpers import metric_value
 from exports import excel_export, ledger_csv, monthly_summary_csv, rounded_frame
 from models import MortgageInput, Overpayment, ProjectionSettings, RatePeriod
 from mortgage_engine import project_with_baseline
+from public_warning import PUBLIC_WARNING_TEXT
 from sample_data import DEFAULT_MORTGAGE, DEFAULT_RATE_SCHEDULE, DEFAULT_SETTINGS
 from scenario_planner import DEFAULT_COMPARISON_AMOUNT, generate_overpayment_scenarios
 
@@ -54,6 +55,7 @@ st.title("Mortgage Overpayment Planner")
 st.caption(
     "A date-aware projection for scheduled payments, recurring overpayments, and dated lump sums."
 )
+st.warning(PUBLIC_WARNING_TEXT)
 
 with st.sidebar:
     st.header("Mortgage Setup")
