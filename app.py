@@ -21,7 +21,7 @@ from scenario_planner import (
 
 st.set_page_config(page_title="Mortgage Overpayment Planner", layout="wide")
 
-INPUT_VERSION = "2026_05_30_bank_balance"
+INPUT_VERSION = "2026_06_01_contract_date_bounds"
 
 
 def money(value: float | int | None) -> str:
@@ -218,7 +218,12 @@ with overpayments_tab:
     col1, col2, col3 = st.columns(3)
     with col1:
         monthly_overpayment = st.number_input(
-            "Monthly recurring overpayment", min_value=0.0, value=0.0, step=50.0, format="%.2f"
+            "Monthly recurring overpayment",
+            min_value=0.0,
+            value=0.0,
+            step=50.0,
+            format="%.2f",
+            key=f"monthly_overpayment_{INPUT_VERSION}",
         )
     with col2:
         recurring_start = st.date_input(
@@ -226,9 +231,14 @@ with overpayments_tab:
             value=default_recurring_start,
             min_value=recurring_min_date,
             max_value=recurring_max_date,
+            key=f"recurring_start_{INPUT_VERSION}",
         )
     with col3:
-        use_recurring_end = st.toggle("Use recurring end date", value=False)
+        use_recurring_end = st.toggle(
+            "Use recurring end date",
+            value=False,
+            key=f"use_recurring_end_{INPUT_VERSION}",
+        )
         recurring_end = None
         if use_recurring_end:
             recurring_end = st.date_input(
@@ -236,6 +246,7 @@ with overpayments_tab:
                 value=recurring_start,
                 min_value=recurring_start,
                 max_value=recurring_max_date,
+                key=f"recurring_end_{INPUT_VERSION}",
             )
 
     overpayment_frame = st.data_editor(

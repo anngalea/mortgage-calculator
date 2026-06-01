@@ -1,6 +1,7 @@
 from datetime import date
 
 from display_helpers import metric_value, recurring_overpayment_date_bounds
+from mortgage_engine import contractual_maturity_date
 from sample_data import DEFAULT_MORTGAGE
 
 
@@ -13,7 +14,10 @@ def test_metric_value_formats_missing_values():
 
 
 def test_recurring_overpayment_date_bounds_match_contractual_term():
+    _, max_date = recurring_overpayment_date_bounds(DEFAULT_MORTGAGE)
+
     assert recurring_overpayment_date_bounds(DEFAULT_MORTGAGE) == (
         date(2026, 6, 1),
         date(2057, 10, 31),
     )
+    assert max_date == contractual_maturity_date(DEFAULT_MORTGAGE)
