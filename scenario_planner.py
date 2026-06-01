@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, timedelta
+from math import ceil
 
 from models import MortgageInput, Overpayment, ProjectionResult, ProjectionSettings, RatePeriod
 from mortgage_engine import add_months, project_mortgage, sort_rates
@@ -29,6 +30,20 @@ class ScenarioComparison:
     baseline: ProjectionResult
     scenarios: list[AutomaticScenario]
     best: AutomaticScenario | None
+
+
+@dataclass(frozen=True)
+class HalfTimeRepaymentPlan:
+    baseline_months: int
+    target_months: int
+    monthly_payment_required: float
+    monthly_overpayment_required: float
+    result: ProjectionResult
+    payoff_date: date | None
+    months_saved: int
+    interest_saved: float
+    total_interest: float
+    total_extra_paid: float
 
 
 def comparison_settings(settings: ProjectionSettings) -> ProjectionSettings:
@@ -107,6 +122,83 @@ def best_scenario(scenarios: list[AutomaticScenario]) -> AutomaticScenario | Non
     if not scenarios:
         return None
     return max(scenarios, key=lambda scenario: (scenario.interest_saved, scenario.months_saved))
+
+
+def project_with_monthly_extra(
+    mortgage: MortgageInput,
+    rate_schedule: list[RatePeriod],
+    settings: ProjectionSettings,
+    monthly_extra: float,
+) -> ProjectionResult:
+    scenario_settings = ProjectionSettings(
+        interest_mode=settings.interest_mode,
+        payment_mode=settings.payment_mode,
+        recalculate_on_rate_change=settings.recalculate_on_rate_change,
+        monthly_overpayment=monthly_extra,
+        monthly_overpayment_start=mortgage.next_payment_date,
+        monthly_overpayment_end=None,
+        include_historical_events=settings.include_historical_events,
+        advanced_payment_day=settings.advanced_payment_day,
+        max_projection_years=settings.max_projection_years,
+    )
+    return project_mortgage(mortgage, rate_schedule, [], scenario_settings)
+
+
+def result_months(result: ProjectionResult) -> int:
+    return int(result.dashboard["Months remaining"] or 0)
+
+
+def round_up_to_cent(value: float) -> float:
+    return ceil(value * 100) / 100
+
+
+def calculate_half_time_repayment(
+    mortgage: MortgageInput,
+    rate_schedule: list[RatePeriod],
+    settings: ProjectionSettings,
+) -> HalfTimeRepaymentPlan:
+    settings = comparison_settings(settings)
+    baseline = project_mortgage(mortgage, rate_schedule, [], settings)
+    baseline_months = result_months(baseline)
+    target_months = max(1, ceil(baseline_months / 2))
+    baseline_interest = float(baseline.dashboard["Total interest from projection start"] or 0.0)
+
+    low = 0.0
+    high = max(mortgage.current_monthly_payment, mortgage.current_balance)
+    high_result = project_with_monthly_extra(mortgage, rate_schedule, settings, high)
+    while result_months(high_result) > target_months:
+        high *= 2
+        high_result = project_with_monthly_extra(mortgage, rate_schedule, settings, high)
+
+    for _ in range(50):
+        midpoint = (low + high) / 2
+        result = project_with_monthly_extra(mortgage, rate_schedule, settings, midpoint)
+        if result_months(result) <= target_months:
+            high = midpoint
+            high_result = result
+        else:
+            low = midpoint
+
+    monthly_extra = round_up_to_cent(high)
+    final_result = project_with_monthly_extra(mortgage, rate_schedule, settings, monthly_extra)
+    while result_months(final_result) > target_months:
+        monthly_extra = round(monthly_extra + 0.01, 2)
+        final_result = project_with_monthly_extra(mortgage, rate_schedule, settings, monthly_extra)
+
+    scenario_interest = float(final_result.dashboard["Total interest from projection start"] or 0.0)
+    scenario_months = result_months(final_result)
+    return HalfTimeRepaymentPlan(
+        baseline_months=baseline_months,
+        target_months=target_months,
+        monthly_payment_required=mortgage.current_monthly_payment + monthly_extra,
+        monthly_overpayment_required=monthly_extra,
+        result=final_result,
+        payoff_date=final_result.dashboard["Projected payoff date"],
+        months_saved=baseline_months - scenario_months,
+        interest_saved=baseline_interest - scenario_interest,
+        total_interest=scenario_interest,
+        total_extra_paid=float(final_result.dashboard["Total extra overpayments"] or 0.0),
+    )
 
 
 def generate_overpayment_scenarios(

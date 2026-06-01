@@ -12,7 +12,11 @@ from models import MortgageInput, Overpayment, ProjectionSettings, RatePeriod
 from mortgage_engine import project_with_baseline
 from public_warning import PUBLIC_WARNING_TEXT
 from sample_data import DEFAULT_MORTGAGE, DEFAULT_RATE_SCHEDULE, DEFAULT_SETTINGS
-from scenario_planner import DEFAULT_COMPARISON_AMOUNT, generate_overpayment_scenarios
+from scenario_planner import (
+    DEFAULT_COMPARISON_AMOUNT,
+    calculate_half_time_repayment,
+    generate_overpayment_scenarios,
+)
 
 
 st.set_page_config(page_title="Mortgage Overpayment Planner", layout="wide")
@@ -320,6 +324,19 @@ with auto_tab:
             ),
             width="stretch",
         )
+
+    st.subheader("Repay in half the time")
+    half_time_plan = calculate_half_time_repayment(mortgage, rate_schedule, settings)
+    half_cols = st.columns(4)
+    half_cols[0].metric("Target months", half_time_plan.target_months)
+    half_cols[1].metric("Monthly payment needed", money(half_time_plan.monthly_payment_required))
+    half_cols[2].metric("Extra per month needed", money(half_time_plan.monthly_overpayment_required))
+    half_cols[3].metric("Payoff date", metric_value(half_time_plan.payoff_date))
+
+    half_cols = st.columns(3)
+    half_cols[0].metric("Interest saved", money(half_time_plan.interest_saved))
+    half_cols[1].metric("Months saved", half_time_plan.months_saved)
+    half_cols[2].metric("Total extra paid", money(half_time_plan.total_extra_paid))
 
 with dashboard_tab:
     dashboard = scenario_result.dashboard

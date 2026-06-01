@@ -7,6 +7,7 @@ from sample_data import DEFAULT_MORTGAGE, DEFAULT_RATE_SCHEDULE, DEFAULT_SETTING
 from scenario_planner import (
     DEFAULT_COMPARISON_AMOUNT,
     best_scenario,
+    calculate_half_time_repayment,
     generate_overpayment_scenarios,
 )
 
@@ -88,3 +89,21 @@ def test_scenarios_report_savings_versus_baseline_and_choose_best_by_interest():
     )
     assert best_scenario(comparison.scenarios) == ranked[0]
     assert comparison.best == ranked[0]
+
+
+def test_half_time_repayment_calculates_required_monthly_payment():
+    plan = calculate_half_time_repayment(
+        DEFAULT_MORTGAGE,
+        DEFAULT_RATE_SCHEDULE,
+        DEFAULT_SETTINGS,
+    )
+
+    assert plan.baseline_months == 377
+    assert plan.target_months == 189
+    assert plan.monthly_payment_required > DEFAULT_MORTGAGE.current_monthly_payment
+    assert plan.monthly_overpayment_required == pytest.approx(
+        plan.monthly_payment_required - DEFAULT_MORTGAGE.current_monthly_payment
+    )
+    assert plan.result.dashboard["Months remaining"] <= plan.target_months
+    assert plan.months_saved >= plan.baseline_months - plan.target_months
+    assert plan.interest_saved > 0
